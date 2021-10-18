@@ -1,24 +1,121 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_livestream/main.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+
 import 'package:flutter_livestream/models/usuario.dart';
 import 'package:flutter_livestream/providers/live_provider.dart';
 import 'package:flutter_livestream/providers/usuarios_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:agora_rtc_engine/rtc_engine.dart';
+import 'package:agora_rtc_engine/rtc_local_view.dart' as rtc_local_view;
+import 'package:agora_rtc_engine/rtc_remote_view.dart' as rtc_remote_view;
+import 'package:permission_handler/permission_handler.dart';
 
 class LivePage extends StatefulWidget {
-  Usuario usuario;
-  LivePage({Key? key, required this.usuario}) : super(key: key);
+  final Usuario usuario;
+  const LivePage({Key? key, required this.usuario}) : super(key: key);
 
   @override
   _LivePageState createState() => _LivePageState();
 }
 
 class _LivePageState extends State<LivePage> {
-  leave() {
-    context.read<LiveProvider>().leave(
-          context.read<UsuariosProvider>().perfil,
+  final appId = dotenv.env['AGORA_APPID'].toString();
+  final token = dotenv.env['AGORA_TOKEN'].toString();
+  int remoteUid = 0;
+  bool entrou = false;
+  late RtcEngine engine;
+  ClientRole role = ClientRole.Broadcaster;
+
+  @override
+  void initState() {
+    super.initState();
+    setLiveMode();
+  }
+
+  @override
+  void dispose() {
+    engine.destroy();
+    super.dispose();
+  }
+
+  setLiveMode() async {
+    String hostLive = widget.usuario.username;
+    String usuarioLogado = context.read<UsuariosProvider>().usuarioLogado.username;
+    if (hostLive == usuarioLogado) {
+      role = ClientRole.Broadcaster;
+    } else {
+      role = ClientRole.Audience;
+    }
+    await startBroadcast();
+  }
+
+  Future<void> startBroadcast() async {
+    await [Permission.camera, Permission.microphone].request();
+
+    engine = await RtcEngine.createWithContext(RtcEngineContext(appId));
+
+    engine.setEventHandler(
+      RtcEngineEventHandler(
+        joinChannelSuccess: (String channel, int uid, _) => joinChannel(),
+        userJoined: (int uid, _) => join(uid),
+        userOffline: (int uid, UserOfflineReason reason) => leave(uid),
+      ),
+    );
+
+    await engine.enableVideo();
+    await engine.setChannelProfile(ChannelProfile.LiveBroadcasting);
+    await engine.setClientRole(role);
+    await engine.joinChannel(token, widget.usuario.username, null, 0);
+  }
+
+  joinChannel() {
+    setState(() => entrou = true);
+  }
+
+  join(int uid) {
+    setState(() => remoteUid = uid);
+    context.read<LiveProvider>().join(
+          context.read<UsuariosProvider>().usuarioLogado,
         );
+  }
+
+  close() async {
+    if (remoteUid != 0) {
+      await engine.leaveChannel();
+    }
+    leave(remoteUid);
+  }
+
+  leave(int uid) {
+    setState(() => remoteUid = 0);
+    final usuarioLogado = context.read<UsuariosProvider>().usuarioLogado;
+    context.read<LiveProvider>().leave(usuarioLogado);
     Navigator.pop(context);
+  }
+
+  Widget _renderLocalPreview() {
+    if (widget.usuario.aovivo && entrou) {
+      return rtc_local_view.SurfaceView();
+    } else {
+      return const Text(
+        'Please join channel first',
+        textAlign: TextAlign.center,
+      );
+    }
+  }
+
+  Widget _renderRemoteVideo() {
+    if (remoteUid != 0) {
+      return rtc_remote_view.SurfaceView(
+        uid: remoteUid,
+        mirrorMode: VideoMirrorMode.Enabled,
+        renderMode: VideoRenderMode.Fit,
+      );
+    } else {
+      return const Text(
+        'Please wait remote user join',
+      );
+    }
   }
 
   @override
@@ -43,13 +140,13 @@ class _LivePageState extends State<LivePage> {
               child: Text(
                 widget.usuario.username,
                 style: const TextStyle(
-                  fontSize: 17,
+                  fontSize: 18,
                   fontWeight: FontWeight.bold,
                   shadows: <Shadow>[
                     Shadow(
-                      offset: Offset(2, 2),
+                      offset: Offset(0, 1),
                       blurRadius: 5.0,
-                      color: Color.fromARGB(50, 0, 0, 0),
+                      color: Color.fromARGB(150, 0, 0, 0),
                     ),
                   ],
                 ),
@@ -107,7 +204,7 @@ class _LivePageState extends State<LivePage> {
           Padding(
             padding: const EdgeInsets.only(right: 4),
             child: IconButton(
-              onPressed: leave,
+              onPressed: close,
               icon: const Icon(Icons.close, size: 32),
             ),
           ),
@@ -117,11 +214,10 @@ class _LivePageState extends State<LivePage> {
       body: Stack(
         alignment: Alignment.topRight,
         children: [
-          Image.asset(
-            'images/background.jpg',
-            fit: BoxFit.fitHeight,
-            height: 2000,
-          ),
+          if (role == ClientRole.Broadcaster)
+            _renderLocalPreview()
+          else if (remoteUid != 0 && role == ClientRole.Audience)
+            _renderRemoteVideo(),
           Padding(
             padding: const EdgeInsets.only(top: 110.0, right: 4),
             child: Column(

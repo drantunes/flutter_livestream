@@ -14,7 +14,6 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _form = GlobalKey<FormState>();
-
   final _username = TextEditingController();
 
   logar() async {
@@ -23,8 +22,8 @@ class _LoginPageState extends State<LoginPage> {
       final avatar = "https://robohash.org/$username.png?set=set3";
       final usuario = Usuario(username: username, avatar: avatar);
       context.read<UsuariosProvider>()
-        ..login(usuario)
-        ..join(usuario);
+        ..login(usuario) // Simula o login
+        ..story(usuario); // Simula um story
 
       Navigator.pushReplacement(
         context,
@@ -36,6 +35,7 @@ class _LoginPageState extends State<LoginPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.white,
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(

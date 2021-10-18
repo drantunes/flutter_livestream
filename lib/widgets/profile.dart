@@ -26,9 +26,6 @@ class _ProfileState extends State<Profile> {
 
   goToLive() {
     if (widget.usuario.aovivo) {
-      context.read<LiveProvider>().join(
-            context.read<UsuariosProvider>().perfil,
-          );
       Navigator.push(
         context,
         MaterialPageRoute(

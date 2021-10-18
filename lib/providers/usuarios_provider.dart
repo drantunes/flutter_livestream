@@ -8,7 +8,7 @@ class UsuariosProvider extends ChangeNotifier {
   late final String _username;
 
   UnmodifiableListView<Usuario> get usuarios => UnmodifiableListView(_usuarios);
-  Usuario get perfil => usuarios.firstWhere((u) => u.username == _username);
+  Usuario get usuarioLogado => usuarios.firstWhere((u) => u.username == _username);
 
   login(Usuario usuario) {
     _username = usuario.username;
@@ -19,15 +19,31 @@ class UsuariosProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  join(Usuario usuario) {
-    _usuarios.add(usuario);
-    addTestUsers();
+  endLive() {
+    _usuarios.firstWhere((u) => u.username == _username).aovivo = false;
     notifyListeners();
   }
 
-  leave(Usuario usuario) {
+  story(Usuario usuario) {
+    _usuarios.add(usuario);
+    addTestLive(usuario);
+    notifyListeners();
+  }
+
+  removeStory(Usuario usuario) {
     _usuarios.remove(usuario);
     notifyListeners();
+  }
+
+  addTestLive(Usuario usuario) {
+    if (usuario.username != 'diego') {
+      _usuarios.add(
+        Usuario(
+          username: 'diego',
+          avatar: "https://robohash.org/diego.png?set=set3",
+        )..aovivo = true,
+      );
+    }
   }
 
   addTestUsers() {

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_livestream/pages/live_page.dart';
 import 'package:flutter_livestream/providers/usuarios_provider.dart';
 import 'package:flutter_livestream/widgets/profile.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -16,18 +18,28 @@ class _FeedPageState extends State<FeedPage> {
 
   startLive() {
     context.read<UsuariosProvider>().startLive();
+    final host = context.read<UsuariosProvider>().usuarioLogado;
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => LivePage(usuario: host),
+        fullscreenDialog: true,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     final usuarios = context.watch<UsuariosProvider>().usuarios;
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        backgroundColor: Colors.white,
         elevation: 0,
-        foregroundColor: Colors.black,
         centerTitle: false,
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
         title: Text('Livegram', style: GoogleFonts.oleoScript(fontSize: size)),
         actions: [
           IconButton(
@@ -49,7 +61,7 @@ class _FeedPageState extends State<FeedPage> {
       ),
       body: Column(
         children: [
-          Container(
+          SizedBox(
             height: 200,
             child: Padding(
               padding: const EdgeInsets.only(top: 24, left: 12),

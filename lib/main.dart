@@ -1,10 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_livestream/pages/login_page.dart';
 import 'package:flutter_livestream/providers/live_provider.dart';
 import 'package:flutter_livestream/providers/usuarios_provider.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
-void main() {
+void main() async {
+  await dotenv.load(fileName: ".env");
+
   runApp(
     MultiProvider(
       providers: [
@@ -47,6 +51,7 @@ class App extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         primarySwatch: primaryBlack,
+        brightness: Brightness.light,
       ),
       home: const LoginPage(),
     );
